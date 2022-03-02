@@ -65,7 +65,7 @@ class TlsCA(dict):
         self.__capath = capath
         self.__name = name
         self.__cert_type = cert_type
-        self.__configFile = join(capath, 'ca.cnf')
+        self.__configFile = join(capath, 'config', 'ca.cnf')
         self.__PEMFile = join(capath, 'private', 'cakey.pem')
         self.__passwordFile = join(capath, 'private', 'capass.enc')
         self.__certFile = join(capath, 'certs', 'cacert.pem')
@@ -75,7 +75,7 @@ class TlsCA(dict):
             if parent is not None:
                 self.set_subject(parent.__subject)
                 self.__parent = parent
-            for subfolder in ['.', 'certs', 'csr', 'newcerts', 'private']:
+            for subfolder in ['.', 'config', 'certs', 'csr', 'newcerts', 'private']:
                 path = realpath(expanduser(path.join(capath, subfolder)))
                 if not path.exists(path):
                     mkdir(path)
@@ -234,11 +234,19 @@ class TlsCA(dict):
                 '-notext', '-batch', '-passin', 'file:' + self.__passwordFile, '-in', csr, '-out', cert]
         run(args, cwd=self.__capath, check=True)
 
-    def sign_cert_csr(self, csr_path, cert_path):
+    def sign_cert_csr(self, ext_conf, csr_path, cert_path):
         print("Running openssl x509 req for", self.__name)
-        args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin', 'file:' + self.__passwordFile, '-CA',
-                self.__chainFile, '-CAkey', self.__PEMFile, '-out', cert_path, '-CAcreateserial', '-days', '365',
-                '-sha256']
+        if self.__cert_type == 'client':
+            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin', 'file:' + self.__passwordFile, '-CA',
+                    self.__chainFile, '-CAkey', self.__PEMFile, '-out', cert_path, '-CAcreateserial', '-days', '365',
+                    '-sha256']
+        elif self.__cert_type == 'server':
+            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin', 'file:' + self.__passwordFile, '-CA',
+                    self.__chainFile, '-CAkey', self.__PEMFile, '-out', cert_path, '-CAcreateserial', '-days', '365',
+                    '-sha256', '-extfile', ext_conf, '-extensions', 'v3_req']
+        else:
+            raise Exception('Unknown intermediate type')
+        print(args)
         run(args, cwd=self.__capath, check=True)
 
     def verify_ca_cer(self):
@@ -281,13 +289,16 @@ class TlsCA(dict):
         self[name] = int_ca
         return int_ca
 
-    def create_cert(self, name, san):
+    def create_cert(self, san):
+        if not san:
+            return
+        name = sane[0]
         if self.__parent is None:
             raise Exception("Creating a certificate signed by a root CA is currently not a feature...")
         if name in self:
             return self[name]
         # For an intermediate CA, all certs are stored in the object itself
-        cert = TlsCert(name, san, self.__subject.clone(), self)
+        cert = TlsCert(san, self.__subject.clone(), self)
         self[name] = cert
 
 
@@ -299,14 +310,16 @@ class TlsCert:
     __name = ""
     __parent = None
     __PEMFile = ""
-    __SAN = ""
+    __SAN = None
     __CSRPath = ""
     __certPath = ""
     __subject = ""
     __configFile = ""
 
-    def __init__(self, name, san, subject, parent):
-        self.__name = name
+    def __init__(self, san, subject, parent):
+        if not san:
+            raise Exception('cannot create TlsCert without at least one name in SAN list')
+        self.__name = name = san[0]
         self.__parent = parent
         self.__SAN = san
         self.__subject = subject
@@ -316,10 +329,11 @@ class TlsCert:
         self.__PEMFile = join(path, 'private', name + '.key.pem')
         self.__CSRPath = join(path, 'csr', name + '.csr')
         self.__certPath = join(path, 'certs', name + '.pem')
-        self.__configFile = join(path, name + '.cnf')
+        self.__configFile = join(path, 'config', 'req_' + name + '.cnf')
 
         self.gen_pem()
-        self.create_cert()
+        self.gen_cnf()
+        self.gen_cert()
 
     def gen_pem(self):
         args = ['openssl', 'genrsa', '-out', self.__PEMFile, '4096']
@@ -330,9 +344,35 @@ class TlsCert:
         args = ['openssl', 'rsa', '-noout', '-text', '-in', self.__PEMFile]
         run(args, check=True)
 
+    def gen_cnf(self):
+        cf = ConfigFile(self.__parent.configfile())
+        cf.set_key('req', 'req_extensions', 'v3_req')
+        # Generic config for both CA and intermediates
+        cf.set_chapter(self.__subject.chapter())
+
+        cf.set_key('v3_req', 'keyUsage', 'keyEncipherment, dataEncipherment')
+        cf.set_key('v3_req', 'extendedKeyUsage', 'serverAuth')
+
+        if len(self.__SAN) > 1:
+            cf.set_key('v3_req', 'subjectAltName', '@alt_names')
+            for i in range(len(self.__SAN)):
+                if i == 0:
+                    # san[0] is already set as CommonName
+                    continue
+                cf.set_key('alt_names', 'DNS.'+str(i), self.__SAN[i])
+
+        print('writing config to', self.__configFile)
+        cf.write(self.__configFile)
+
     def create_csr(self):
+        # openssl req -new -out company_san.csr -newkey rsa:4096 -nodes -sha256 -keyout company_san.key.temp -config
+        # req.conf
+        # # Convert key to PKCS#1
+        # openssl rsa -in company_san.key.temp -out company_san.key
+        # # Add csr in a readable format
+        # openssl req -text -noout -verify -in company_san.csr > company_san.csr.txt
         args = ['openssl', 'req', '-new', '-subj', self.__subject.string(), '-key', self.__PEMFile, '-out',
-                self.__CSRPath]
+                self.__CSRPath, '-config', self.__configFile]
         run(args, check=True)
         self.verify_csr()
 
@@ -340,9 +380,9 @@ class TlsCert:
         args = ['openssl', 'req', '-noout', '-text', '-in', self.__CSRPath]
         run(args, check=True)
 
-    def create_cert(self):
+    def gen_cert(self):
         self.create_csr()
-        self.__parent.sign_cert_csr(self.__CSRPath, self.__certPath)
+        self.__parent.sign_cert_csr(self.__configFile, self.__CSRPath, self.__certPath)
         self.verify_cert()
 
     def verify_cert(self):
