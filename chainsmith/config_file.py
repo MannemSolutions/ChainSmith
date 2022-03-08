@@ -150,7 +150,7 @@ class ConfigChapter(list):
 
     def reset_key(self, key):
         """Clear a parameter"""
-        for _, line in enumerate(self):
+        for i, line in enumerate(self):
             if line.name() == key:
                 self.pop(i)
                 return

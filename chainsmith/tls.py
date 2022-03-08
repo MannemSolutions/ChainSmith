@@ -17,13 +17,15 @@ from chainsmith.config_file import ConfigFile, ConfigLine, ConfigChapter
 
 def get_config_path():
     """
-    Small helper to get the correct openssl.conf file regardless of distribution.
+    Small helper to get the correct openssl.conf file regardless of
+    distribution.
     """
     known_paths = [
-        # MacOS, order before /etc/ssl/openssl.cnf, cause that also exists and is not ok
+        # MacOS, order before /etc/ssl/openssl.cnf, because that also
+        # exists and is not the correct one to use as a default
         '/usr/local/etc/openssl@1.1/openssl.cnf',
         # RHEL
-        '/etc/pki/tls/openssl.cnf', 
+        '/etc/pki/tls/openssl.cnf',
         # Debian
         '/etc/ssl/openssl.cnf',
     ]
@@ -134,10 +136,6 @@ class TlsCA(dict):
         except OSError as os_err:
             print("Cannot open file:", os_err)
 
-    def set_debug_output(self, out, err):
-        self.__stdout = out
-        self.__stderr = err
-
     def name(self):
         """Return the name of this TlsXA"""
         return self.__name
@@ -147,11 +145,18 @@ class TlsCA(dict):
         self.__subject = subject.clone()
         self.__subject['CN'] = self.name()
 
+    def set_debug_output(self, out, err):
+        """Set the stdout and stderr to log to"""
+        self.__stdout = out
+        self.__stderr = err
+
     def log_command(self, command):
+        """log a command that is about to be run"""
         self.__stdout.write(command+':\n')
         self.__stdout.write('='*len(command)+'=\n')
 
     def log(self, line):
+        """Log a line"""
         self.__stdout.write(line+'\n')
 
     def gen_pem_password(self, password=None):
@@ -162,7 +167,8 @@ class TlsCA(dict):
         if not password:
             password = ''.join(choice(ascii_uppercase + digits)
                                for _ in range(18))
-            self.log('using a random password for {} pem: {}'.format(self.name(), password))
+            self.log('using a random password for {} pem: {}'
+                     ''.format(self.name(), password))
         # This creates a tempfile, writes the password to it, creates the
         # enc file and removes the tempfile as atomic as possible
         try:
@@ -174,7 +180,8 @@ class TlsCA(dict):
                         tmp_file.name, '-out', self.__password_file, '-pass',
                         'file:'+tmp_file.name]
                 self.log_command(' '.join(args))
-                run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
+                run(args, check=True, stdout=self.__stdout,
+                    stderr=self.__stderr)
         except OSError as os_err:
             print("Cannot open file:", os_err)
 
@@ -273,7 +280,7 @@ class TlsCA(dict):
                                 'critical, digitalSignature, keyEncipherment')
             config_file.set_key('usr_cert', 'extendedKeyUsage', 'serverAuth')
 
-        self.log('writing config to '+ self.__config_file)
+        self.log('writing config to ' + self.__config_file)
         config_file.write(self.__config_file)
 
     def gen_ca_pem(self):
@@ -290,7 +297,8 @@ class TlsCA(dict):
                 'file:' + self.__password_file, '-out', self.__pem_file,
                 '4096']
         self.log_command(' '.join(args))
-        run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+            stderr=self.__stderr)
         self.verify_pem()
 
     def verify_pem(self):
@@ -300,7 +308,8 @@ class TlsCA(dict):
                 self.__pem_file, '-passin',
                 'file:' + self.__password_file]
         self.log_command(' '.join(args))
-        run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+            stderr=self.__stderr)
 
     def create_ca_cert(self):
         """Create th cert for this CA"""
@@ -315,7 +324,8 @@ class TlsCA(dict):
                     self.__config_file, '-extensions', 'v3_ca', '-key',
                     self.__pem_file, '-out', self.__cert_file]
             self.log_command(' '.join(args))
-            run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+            run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+                stderr=self.__stderr)
         else:
             csr_path = join(self.__capath, 'csr', 'intermediate.csr.pem')
             args = ['openssl', 'req', '-new', '-sha256', '-subj',
@@ -323,7 +333,8 @@ class TlsCA(dict):
                     '-passin', 'file:' + self.__password_file,
                     '-key', self.__pem_file, '-out', csr_path]
             self.log_command(' '.join(args))
-            run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+            run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+                stderr=self.__stderr)
             self.__parent.sign_intermediate_csr(csr_path, self.__cert_file)
         self.verify_ca_cer()
         self.write_chain()
@@ -336,7 +347,8 @@ class TlsCA(dict):
                 '-notext', '-batch', '-passin',
                 'file:' + self.__password_file, '-in', csr, '-out', cert]
         self.log_command(' '.join(args))
-        run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+            stderr=self.__stderr)
 
     def sign_cert_csr(self, ext_conf, csr_path, cert_path):
         """Sign a csr for a child cert of this CA"""
@@ -361,7 +373,8 @@ class TlsCA(dict):
         else:
             raise Exception('Unknown intermediate type')
         self.log_command(' '.join(args))
-        run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+            stderr=self.__stderr)
 
     def verify_ca_cer(self):
         """Verify that the certificate for this intermediate is valid"""
@@ -369,7 +382,8 @@ class TlsCA(dict):
         args = ['openssl', 'x509', '-noout', '-text', '-in',
                 'certs/cacert.pem']
         self.log_command(' '.join(args))
-        run(args, cwd=self.__capath, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
+            stderr=self.__stderr)
 
     def get_cert(self):
         """Return the cert of this CA as a string"""
@@ -489,14 +503,17 @@ class TlsCert:
         self.__config_file = join(path, 'config', 'req_' + name + '.cnf')
 
     def set_debug_output(self, out, err):
+        """Set the stdout and stderr to log to"""
         self.__stdout = out
         self.__stderr = err
 
     def log_command(self, command):
+        """log a command that is about to be run"""
         self.__stdout.write(command+':\n')
         self.__stdout.write('='*len(command)+'=\n')
 
     def log(self, line):
+        """Log a line"""
         self.__stdout.write(line+'\n')
 
     def name(self):
