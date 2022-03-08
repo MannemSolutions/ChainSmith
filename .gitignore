@@ -3,3 +3,5 @@ tls
 
 # Intelij
 .idea
+build
+.egg-info/

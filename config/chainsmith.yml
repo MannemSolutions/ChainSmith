@@ -16,7 +16,7 @@ intermediates:
 #      host.example.com:
 #        - 10.11.12.13
 # And you can read servers from an ansible hostsfile (yaml formattted)
-    environment: environments/poc/hosts
+#    environment: environments/poc/hosts
   - name: client
     clients:
       - postgres

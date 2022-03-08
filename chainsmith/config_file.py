@@ -67,8 +67,7 @@ class ConfigFile(list):
         :param new_chapter: The chapter to add. Should eb of type ConfigChapter
         :return:
         """
-        for i in enumerate(self):
-            chapter = self[i]
+        for i, chapter in enumerate(self):
             if chapter.name() == new_chapter.name():
                 self[i] = new_chapter
                 return
@@ -151,8 +150,7 @@ class ConfigChapter(list):
 
     def reset_key(self, key):
         """Clear a parameter"""
-        for i in enumerate(self):
-            line = self[i]
+        for _, line in enumerate(self):
             if line.name() == key:
                 self.pop(i)
                 return
