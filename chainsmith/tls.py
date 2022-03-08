@@ -55,7 +55,7 @@ class TlsSubject(dict):
 
     def string(self):
         """Return a string representation of a certificates subject"""
-        return '/' + '/'.join(['{}={}'.format(k, v) for k, v in self.items()])
+        return '/' + '/'.join([f'{k}={v}' for k, v in self.items()])
 
     def merge(self, other):
         """Merge a TlsSubject with another TlsSubject or a dict"""
@@ -76,7 +76,7 @@ class TlsSubject(dict):
         """
         chapter = ConfigChapter('req_distinguished_name')
         for key, value in self.items():
-            chapter.append(ConfigLine('{} = {}'.format(key, value)))
+            chapter.append(ConfigLine(f'{key} = {value}'))
         chapter.append(ConfigLine(''))
         return chapter
 
@@ -127,11 +127,11 @@ class TlsCA(dict):
                     makedirs(path)
             serial_file = join(capath, 'serial')
             if not exists(serial_file):
-                with open(serial_file, 'w') as serial:
+                with open(serial_file, 'w', encoding="utf8") as serial:
                     serial.write('01')
             index_file = join(capath, 'index.txt')
             if not exists(index_file):
-                with open(index_file, 'w'):
+                with open(index_file, 'w', encoding="utf8"):
                     pass
         except OSError as os_err:
             print("Cannot open file:", os_err)
@@ -167,8 +167,8 @@ class TlsCA(dict):
         if not password:
             password = ''.join(choice(ascii_uppercase + digits)
                                for _ in range(18))
-            self.log('using a random password for {} pem: {}'
-                     ''.format(self.name(), password))
+            self.log(f'using a random password for {self.name()} '
+                     f'pem: {password}')
         # This creates a tempfile, writes the password to it, creates the
         # enc file and removes the tempfile as atomic as possible
         try:
@@ -387,7 +387,7 @@ class TlsCA(dict):
 
     def get_cert(self):
         """Return the cert of this CA as a string"""
-        with open(self.__cert_file) as crt:
+        with open(self.__cert_file, encoding="utf8") as crt:
             return crt.read()
 
     def get_chain(self):
@@ -410,7 +410,7 @@ class TlsCA(dict):
 
     def get_private_key(self):
         """Return the private key of tis intermediate as a string"""
-        with open(self.__pem_file) as pem:
+        with open(self.__pem_file, encoding="utf8") as pem:
             return pem.read()
 
     def get_private_keys(self):
@@ -426,7 +426,7 @@ class TlsCA(dict):
         files for this CA
         """
         try:
-            with open(self.__chain_file, 'w') as chainfile:
+            with open(self.__chain_file, 'w', encoding="utf8") as chainfile:
                 chainfile.write(self.get_chain())
         except OSError as os_err:
             print("Cannot open file:", os_err)
@@ -595,7 +595,7 @@ class TlsCert:
     def get_cert(self):
         """Return the certificate as a string"""
         try:
-            with open(self.__cert_file) as crt:
+            with open(self.__cert_file, encoding="utf8") as crt:
                 return crt.read()
         except OSError as os_err:
             print("Cannot open file:", os_err)
@@ -604,7 +604,7 @@ class TlsCert:
     def get_private_key(self):
         """Return the private key for this cert as a string"""
         try:
-            with open(self.__pem_file) as pem:
+            with open(self.__pem_file, encoding="utf8") as pem:
                 return pem.read()
         except OSError as os_err:
             print("Cannot open file:", os_err)

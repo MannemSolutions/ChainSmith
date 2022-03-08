@@ -61,7 +61,7 @@ class Config(dict):
         This function reads and returns config data
         """
         # Configuration file look up.
-        with open(self['configfile']) as configfile:
+        with open(self['configfile'], encoding="utf8") as configfile:
             self.__yaml = yaml.load(configfile, Loader=Loader)
         self.merge(self.__yaml)
 

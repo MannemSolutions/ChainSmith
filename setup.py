@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 
 """
-Create a certificate chain with a root, intermediates, and client / server certificates.
+Create a certificate chain with a root, intermediates, and
+client / server certificates.
 
 This module installs chainsmith as a binary.
 """
@@ -12,14 +13,15 @@ import re
 from setuptools import find_packages
 from setuptools import setup
 
-with open('requirements.txt') as reqfile:
+with open('requirements.txt', encoding="utf8") as reqfile:
     INSTALL_REQUIREMENTS = reqfile.read().split('\n')
 
 
 def find_version():
     """Read the rpmbuilder version from chainsmith/__init__.py."""
     here = os.path.abspath(os.path.dirname(__file__))
-    with codecs.open(os.path.join(here, 'chainsmith', '__init__.py'), 'r') as file_pointer:
+    with codecs.open(os.path.join(here, 'chainsmith', '__init__.py'), 'r') \
+            as file_pointer:
         version_file = file_pointer.read()
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
                               version_file, re.M)

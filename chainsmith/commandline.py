@@ -38,7 +38,7 @@ def hosts_from_inventory(hosts_path):
     if not hosts_path:
         return []
     try:
-        with open(hosts_path) as hosts_file:
+        with open(hosts_path, encoding="utf8") as hosts_file:
             groups = yaml.load(hosts_file.read(), Loader=Loader)
     except Exception as error:
         raise Exception('could not open', hosts_path) from error
@@ -94,7 +94,7 @@ def write_data(config, data):
                               default_style='|')
         path = config.get(key + 'path')
         if path:
-            with open(path, 'w') as file:
+            with open(path, 'w', encoding="utf8") as file:
                 file.write('---\n')
                 file.write(yaml_data)
         else:
@@ -118,10 +118,10 @@ def from_yaml():
         tmpdir = tempfile.mkdtemp()
     root = TlsCA(join(tmpdir, 'tls'), subject.get('CN', 'postgres'),
                  'ca', None)
-    with open(join(tmpdir, 'stdout.log'), 'w') as stdoutlog, \
-            open(join(tmpdir, 'stderr.log'), 'w') as stderrlog:
+    with open(join(tmpdir, 'stdout.log'), 'w', encoding="utf8") as outlog, \
+            open(join(tmpdir, 'stderr.log'), 'w', encoding="utf8") as errlog:
         if not config.get('debug'):
-            root.set_debug_output(stdoutlog, stderrlog)
+            root.set_debug_output(outlog, errlog)
         root.set_subject(subject)
         root.create_ca_cert()
         for intermediate in config['intermediates']:

@@ -30,7 +30,7 @@ class ConfigFile(list):
         file = path.realpath(path.expanduser(file))
         chapter = ConfigChapter('')
         self.append(chapter)
-        with open(file) as config_file:
+        with open(file, encoding="utf8") as config_file:
             for line in config_file:
                 line = line.strip()
                 if len(line) == 0:
@@ -49,7 +49,7 @@ class ConfigFile(list):
         """
         file = path.realpath(path.expanduser(file))
         try:
-            with open(file, 'w') as config_file:
+            with open(file, 'w', encoding="utf8") as config_file:
                 config_file.write(self.string())
         except OSError as os_err:
             print('Cannot open file:', os_err)
@@ -135,7 +135,7 @@ class ConfigChapter(list):
         """Return a string representation of the chapter"""
         ret = []
         if self.__name:
-            ret.append('[ {} ]'.format(self.__name))
+            ret.append(f'[ {self.__name} ]')
         ret += [c.string() for c in self]
         return '\n'.join(ret)
 
