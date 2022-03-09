@@ -116,6 +116,7 @@ def from_yaml():
     tmpdir = config.get('tmpdir', None)
     if not tmpdir:
         tmpdir = tempfile.mkdtemp()
+        print(f"# More info in in {tmpdir}.")
     root = TlsCA(join(tmpdir, 'tls'), subject.get('CN', 'postgres'),
                  'ca', None)
     with open(join(tmpdir, 'stdout.log'), 'w', encoding="utf8") as outlog, \
