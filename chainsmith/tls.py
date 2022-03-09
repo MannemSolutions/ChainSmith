@@ -3,6 +3,7 @@ This module handles Tls objects, which could be
 - a TLS root ca or TLS intermediate (and private keys)
 - a certificate (and private keys)
 """
+from ipaddress import ip_address
 from os import makedirs
 from os.path import join, realpath, expanduser, exists
 from string import digits, ascii_uppercase
@@ -546,13 +547,17 @@ class TlsCert:
 
         if len(self.__subject_alternate_names) > 1:
             config_file.set_key('v3_req', 'subjectAltName', '@alt_names')
-            for i in enumerate(self.__subject_alternate_names):
-                if i == 0:
-                    # san[0] is already set as CommonName
-                    continue
-                config_file.set_key('alt_names', 'DNS.'+str(i),
-                                    self.__subject_alternate_names[i])
-
+            dns_counter = ip_counter = 0
+            for _, alt_name in enumerate(self.__subject_alternate_names):
+                try:
+                    ip_address(alt_name)
+                    config_file.set_key('alt_names', 'IP.'+str(ip_counter),
+                                        alt_name)
+                    ip_counter += 1
+                except ValueError:
+                    config_file.set_key('alt_names', 'DNS.'+str(dns_counter),
+                                        alt_name)
+                    dns_counter += 1
         self.log('writing config to '+self.__config_file)
         config_file.write(self.__config_file)
 
