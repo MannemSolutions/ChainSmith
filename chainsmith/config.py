@@ -41,15 +41,18 @@ class Config(dict):
         parser.add_argument("-c", "--configfile",
                             default=expanduser(config_path),
                             help='The config file to use')
+        parser.add_argument("-e", "--environment",
+                            help='Read servers from an ansible hosts file. '
+                                 'Can also be set per intermediate in config yaml.')
         parser.add_argument("-o", "--output", default=None,
                             help='Write the yaml with certs to a file. '
-                                 'Leave empty for stdout')
+                                 'Leave empty for stdout.')
         parser.add_argument("-p", "--pem", default=None,
                             help='Write the yaml with keys to a file. '
-                                 'Leave empty for stderr')
+                                 'Leave empty for stderr.')
         parser.add_argument("-t", "--tmpdir",
                             help='Tempdir for generating the certs. '
-                                 'Leave empty for mktemp')
+                                 'Leave empty for mktemp.')
         parser.add_argument("-d", "--debug", action='store_true',
                             help='Print openssl output to stdout and stderr. '
                                  'Print to files in tmpdir when not set.')
