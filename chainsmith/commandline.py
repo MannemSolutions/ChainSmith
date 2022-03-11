@@ -58,18 +58,18 @@ def hosts_from_inventory(hosts_path):
 
 def add_intermediate(root, intermediate, config, data):
     """
-    Create an intermediate of type 'server' and add to root
+    Create an intermediate, and read back certs
     """
     name = intermediate['name']
     if 'servers' in intermediate:
         server = root.create_int(name, 'server')
         for host in hosts_from_inventory(
-                intermediate.get('environment', config.get('environment'))):
+                intermediate.get('hosts', config.get('hosts'))):
             if host in intermediate['servers']:
                 continue
             intermediate['servers'][host] = [gethostbyname(host)]
-        for name, alts in intermediate['servers'].items():
-            server.create_cert([name] + alts)
+        for server_name, alts in intermediate['servers'].items():
+            server.create_cert([server_name] + alts)
         data['certs'][name] = server.get_certs()
         data['private_keys'][name] = server.get_private_keys()
     elif 'clients' in intermediate:
@@ -92,7 +92,7 @@ def write_data(config, data):
         yaml_data = yaml.dump({key: datum}, Dumper=Dumper,
                               default_flow_style=False,
                               default_style='|')
-        path = config.get(key + 'path')
+        path = config.get(key.replace('_', '') + 'path')
         if path:
             with open(path, 'w', encoding="utf8") as file:
                 file.write('---\n')

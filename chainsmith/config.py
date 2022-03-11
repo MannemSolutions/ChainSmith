@@ -27,6 +27,7 @@ class Config(dict):
         super().__init__()
         self.get_arguments()
         self.read_configfile()
+        self.read_environment()
 
     def get_arguments(self):
         """
@@ -41,13 +42,14 @@ class Config(dict):
         parser.add_argument("-c", "--configfile",
                             default=expanduser(config_path),
                             help='The config file to use')
-        parser.add_argument("-e", "--environment",
+        parser.add_argument("--hosts",
                             help='Read servers from an ansible hosts file. '
-                                 'Can also be set per intermediate in config yaml.')
-        parser.add_argument("-o", "--output", default=None,
+                                 'Can also be set per intermediate in config '
+                                 'yaml.')
+        parser.add_argument("-C", "--certspath", default=None,
                             help='Write the yaml with certs to a file. '
                                  'Leave empty for stdout.')
-        parser.add_argument("-p", "--pem", default=None,
+        parser.add_argument("-p", "--privatekeyspath", default=None,
                             help='Write the yaml with keys to a file. '
                                  'Leave empty for stderr.')
         parser.add_argument("-t", "--tmpdir",
@@ -68,6 +70,14 @@ class Config(dict):
             self.__yaml = yaml.load(configfile, Loader=Loader)
         self.merge(self.__yaml)
 
+    def read_environment(self):
+        """
+        This function reads config from environment vars
+        """
+        self.merge({k.lower()[11:]: v
+                    for k, v in environ.items()
+                    if k.startswith('CHAINSMITH_')})
+
     def merge(self, other):
         """
         merge the key/values of other dicts with key/values of self
@@ -75,4 +85,4 @@ class Config(dict):
         :return:
         """
         for key, value in other.items():
-            self[key] = value
+            self[key.lower()] = value
