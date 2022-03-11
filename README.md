@@ -1,5 +1,8 @@
 # ChainSmith
 
+## TL;DR
+Please see [QUICKSTART.md] to get started immediately.
+
 ## Why use ChainSmith
 If you want to run Postgres and other tools Enterprise grade you want to use SSL for encryption in transit, and verifying trust.
 But creating a simple chain with a root, 2 intermediates, client certificates and/or server certificates is a very complex procedure requirying much manual effort.
@@ -15,7 +18,10 @@ And as such systems can be easily equipped with the proper certificate chains so
 
 ## Usage
 
-### config
+## Installation
+Please see [QUICKSTART.md] for options to install and run chainsmith.
+
+### Config
 An example config file chainsmith.yml is shipped with chainsmith.
 Change as required and run chainsmith.
 ```
