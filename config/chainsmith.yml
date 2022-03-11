@@ -1,0 +1,26 @@
+---
+subject:
+  C:  NL
+  ST: Somestate
+  L:  Somecity
+  O:  Mannem Solutions
+  OU: Chainsmith TLS chain maker
+  CN: chainsmith
+
+#tmpdir: /tmp/certs/postgres
+
+intermediates:
+  - name: server
+    servers:
+      host1.example.com:
+        - 1.2.3.4
+# You can set servers directly
+#      host.example.com:
+#        - 10.11.12.13
+# And you can read servers from an ansible hostsfile (yaml formattted)
+#    hosts: environments/poc/hosts
+  - name: client
+    clients:
+      - postgres
+      - wal-g
+      - application

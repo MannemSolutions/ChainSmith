@@ -2,17 +2,33 @@
 
 ## Why use ChainSmith
 If you want to run Postgres and other tools Enterprise grade you want to use SSL for encryption in transit, and verifying trust.
-But creating a simple chain with a root, 2 intermediates, client certificates and/or server certificates is too complex and requires much manual effort.
-Or requires o trust a black box implementation where no one understands what actually is happening.
+But creating a simple chain with a root, 2 intermediates, client certificates and/or server certificates is a very complex procedure requirying much manual effort.
 This project is meant to fix this.
 
 With ChainSmith, you can easily define a chain in yaml config, and then run this script to create a root ca, intermediates and signed certificates.
-Furthermore, you can bundle all generated certs in either multiple tar files (with readmes), or yaml files ready to be used in an Ansible deployment.
-You could even use this project to very easily generate all CSR's to be signed externally, and run with the generated chain until they are.
-And the best part, if you understand python, you can see exactly what ChainSmith is doing to get there.
+All tar files are bundled in separate yaml files, so you can easily use them in tools like Ansible for deployment.
+Or, if you do want externally signed certificates, you can use ChainSmith to generate all CSR's to be signed externally.
+And you can run with the generated chain until the externally signed certificates are available.
 
 ChainSmith is a crucial piece into improving adoption of running Postgres and other tools with proper security.
 And as such systems can be easily equipped with the proper certificate chains so that secure communication and authorization is possible.
+
+## Usage
+
+### config
+An example config file chainsmith.yml is shipped with chainsmith.
+Change as required and run chainsmith.
+```
+chainsmith -c /PATH/TO/CONFIG/chainsmith.yml
+```
+
+For more options, see
+```
+chainsmith --help
+```
+
+**Note** that by default the certificates are written as a yaml hash to stdout, and the private keys are written as a yal hash to stderr.
+Alternatively you can redirect them to files using the `-o` and `-p` options.
 
 ## Why use certificates
 Certificates are a technical implementation for verification of trustworthiness.
