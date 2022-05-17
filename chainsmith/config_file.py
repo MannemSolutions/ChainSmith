@@ -36,7 +36,7 @@ class ConfigFile(list):
                 if len(line) == 0:
                     chapter.append(ConfigLine(line))
                 elif line[0] == '[' and line[-1] == ']':
-                    chapter = ConfigChapter(line[1:-2].strip())
+                    chapter = ConfigChapter(line[1:-1].strip())
                     self.append(chapter)
                 else:
                     chapter.append(ConfigLine(line))
