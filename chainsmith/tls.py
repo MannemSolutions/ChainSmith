@@ -257,10 +257,22 @@ class TlsCA(dict):
         config_file.set_key('CA_default', 'certificate', self.__cert_file)
         config_file.set_key('CA_default', 'private_key', self.__pem_file)
 
-        if self.__cert_type in ['client', 'server']:
+        if self.__cert_type in ['clientserver', 'client', 'server']:
             config_file.set_key('usr_cert', 'basicConstraints', 'CA:FALSE')
             config_file.set_key('usr_cert', 'subjectKeyIdentifier', 'hash')
-        if self.__cert_type == 'client':
+        if self.__cert_type == 'clientserver':
+            config_file.set_key('usr_cert', 'nsCertType', 
+                                'client, server, email')
+            config_file.set_key('usr_cert', 'nsComment',
+                                '"OpenSSL Generated ClientServer Certificate"')
+            config_file.set_key('usr_cert', 'authorityKeyIdentifier',
+                                'keyid,issuer')
+            config_file.set_key('usr_cert', 'keyUsage',
+                                'critical, nonRepudiation, digitalSignature, '
+                                'keyEncipherment')
+            config_file.set_key('usr_cert', 'extendedKeyUsage',
+                                'clientAuth, serverAuth, emailProtection')
+        elif self.__cert_type == 'client':
             config_file.set_key('usr_cert', 'nsCertType', 'client, email')
             config_file.set_key('usr_cert', 'nsComment',
                                 '"OpenSSL Generated Client Certificate"')
@@ -313,7 +325,7 @@ class TlsCA(dict):
             stderr=self.__stderr)
 
     def create_ca_cert(self):
-        """Create th cert for this CA"""
+        """Create the cert for this CA"""
         self.gen_ca_cnf()
         self.gen_ca_pem()
         self.log("Running openssl req for "+self.name())
@@ -359,7 +371,12 @@ class TlsCA(dict):
         # -extfile tls/int_server/config/req_server1.cnf -extensions v3_req
         # -passin file:/host/tls/int_server/private/capass.enc
         self.log("Running openssl x509 req for "+self.name())
-        if self.__cert_type == 'client':
+        if self.__cert_type == 'clientserver':
+            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
+                    'file:' + self.__password_file, '-CA', self.__chain_file,
+                    '-CAkey', self.__pem_file, '-out', cert_path,
+                    '-CAcreateserial', '-days', '365', '-sha256']
+        elif self.__cert_type == 'client':
             args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
                     'file:' + self.__password_file, '-CA', self.__chain_file,
                     '-CAkey', self.__pem_file, '-out', cert_path,
