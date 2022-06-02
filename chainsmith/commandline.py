@@ -61,7 +61,18 @@ def add_intermediate(root, intermediate, config, data):
     Create an intermediate, and read back certs
     """
     name = intermediate['name']
-    if 'servers' in intermediate:
+    if 'clientservers' in intermediate:
+        clientserver = root.create_int(name, 'clientserver')
+        for host in hosts_from_inventory(
+                intermediate.get('hosts', config.get('hosts'))):
+            if host in intermediate['clientservers']:
+                continue
+            intermediate['clientservers'][host] = [gethostbyname(host)]
+        for clientserver_name, alts in intermediate['clientservers'].items():
+            clientserver.create_cert([clientserver_name] + alts)
+        data['certs'][name] = clientserver.get_certs()
+        data['private_keys'][name] = clientserver.get_private_keys()
+    elif 'servers' in intermediate:
         server = root.create_int(name, 'server')
         for host in hosts_from_inventory(
                 intermediate.get('hosts', config.get('hosts'))):
