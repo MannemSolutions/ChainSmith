@@ -205,9 +205,7 @@ class TlsCA(dict):
         """Generate a ca.cnf from openssl.cnf with many changes"""
         if self.__parent is not None:
             config_file = ConfigFile(self.__parent.configfile())
-            config_file.set_key('CA_default', 'dir', self.__capath)
             config_file.set_key('CA_default', 'policy', 'policy_anything')
-            config_file.set_key('CA_default', 'default_days', '3650')
             # req_attributes contains _min and _max values that help with
             # prompt=yes, but not with prompt=no, so we are resetting to
             # empty chapter
@@ -231,9 +229,6 @@ class TlsCA(dict):
                                     '.include /etc/crypto-policies/back-ends'
                                     '/opensslcnf.config', '')
 
-            config_file.set_key('CA_default', 'dir', self.__capath)
-            # lifetime of ca is 10 years
-            config_file.set_key('CA_default', 'default_days', '3650')
             # config_file.set_key('CA_default', 'policy', 'policy_match')
 
             config_file.set_key('req', 'default_bits', '4096')
@@ -252,6 +247,10 @@ class TlsCA(dict):
             config_file.set_key('v3_ca', 'basicConstraints',
                                 'critical,CA:true')
 
+        config_file.set_key('CA_default', 'dir', self.__capath)
+        # lifetime of ca is 10 years
+        config_file.set_key('CA_default', 'default_days', '3650')
+
         # Generic config for both CA and intermediates
         config_file.set_chapter(self.__subject.chapter())
         config_file.set_key('CA_default', 'certificate', self.__cert_file)
@@ -261,7 +260,7 @@ class TlsCA(dict):
             config_file.set_key('usr_cert', 'basicConstraints', 'CA:FALSE')
             config_file.set_key('usr_cert', 'subjectKeyIdentifier', 'hash')
         if self.__cert_type == 'clientserver':
-            config_file.set_key('usr_cert', 'nsCertType', 
+            config_file.set_key('usr_cert', 'nsCertType',
                                 'client, server, email')
             config_file.set_key('usr_cert', 'nsComment',
                                 '"OpenSSL Generated ClientServer Certificate"')
