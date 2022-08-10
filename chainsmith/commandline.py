@@ -20,13 +20,14 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-DEFAULT_SUBJECT = {"C": "NL",
-                   "ST": "Somestate",
-                   "L": "Somecity",
-                   "O": "Mannem Solutions",
-                   "OU": "Chainsmith TLS chain maker",
-                   "CN": "chainsmith"
-                   }
+DEFAULT_SUBJECT = {
+    "C": "NL",
+    "ST": "Somestate",
+    "L": "Somecity",
+    "O": "Mannem Solutions",
+    "OU": "Chainsmith TLS chain maker",
+    "CN": "chainsmith",
+}
 
 
 def hosts_from_inventory(hosts_path):
@@ -56,43 +57,34 @@ def hosts_from_inventory(hosts_path):
     return hosts
 
 
-def add_intermediate(root, intermediate, config, data):
+def add_intermediate(root, intermediate_config, data):
     """
     Create an intermediate, and read back certs
     """
-    name = intermediate['name']
-    if 'clientservers' in intermediate:
-        clientserver = root.create_int(name, 'clientserver')
-        for host in hosts_from_inventory(
-                intermediate.get('hosts', config.get('hosts'))):
-            if host in intermediate['clientservers']:
+    intermediate_name = intermediate_config['name']
+    intermediate_ca = root.create_int(intermediate_name,
+                                      intermediate_config)
+    try:
+        for client in intermediate_config['clients']:
+            intermediate_ca.create_cert([client])
+    except KeyError:
+        pass
+
+    if 'serverAuth' in intermediate_config.get('extended_key_usages', []):
+        for host in hosts_from_inventory(intermediate_config.get('hosts')):
+            if host in intermediate_config['servers']:
                 continue
-            intermediate['clientservers'][host] = [gethostbyname(host)]
-        for clientserver_name, alts in intermediate['clientservers'].items():
-            clientserver.create_cert([clientserver_name] + alts)
-        data['certs'][name] = clientserver.get_certs()
-        data['private_keys'][name] = clientserver.get_private_keys()
-    elif 'servers' in intermediate:
-        server = root.create_int(name, 'server')
-        for host in hosts_from_inventory(
-                intermediate.get('hosts', config.get('hosts'))):
-            if host in intermediate['servers']:
-                continue
-            intermediate['servers'][host] = [gethostbyname(host)]
-        for server_name, alts in intermediate['servers'].items():
-            server.create_cert([server_name] + alts)
-        data['certs'][name] = server.get_certs()
-        data['private_keys'][name] = server.get_private_keys()
-    elif 'clients' in intermediate:
-        intermediate_client = root.create_int(name, 'client')
-        for client in intermediate['clients']:
-            intermediate_client.create_cert([client])
-        data['certs'][name] = intermediate_client.get_certs()
-        data['private_keys'][name] = intermediate_client.get_private_keys()
-    else:
-        raise Exception('intermediate of unknown type. '
-                        'Either specify "clients" or "servers"',
-                        intermediate)
+            intermediate_config['servers'][host] = [gethostbyname(host)]
+
+    try:
+        for server_name, alts in intermediate_config['servers'].items():
+            intermediate_ca.create_cert([server_name] + alts)
+    except KeyError:
+        pass
+
+    data['certs'][intermediate_name] = intermediate_ca.get_certs()
+    data['private_keys'][intermediate_name] = \
+        intermediate_ca.get_private_keys()
 
 
 def write_data(config, data):
@@ -129,7 +121,7 @@ def from_yaml():
         tmpdir = tempfile.mkdtemp()
         print(f"# More info in in {tmpdir}.")
     root = TlsCA(join(tmpdir, 'tls'), subject.get('CN', 'postgres'),
-                 'ca', None)
+                 {}, None)
     with open(join(tmpdir, 'stdout.log'), 'w', encoding="utf8") as outlog, \
             open(join(tmpdir, 'stderr.log'), 'w', encoding="utf8") as errlog:
         if not config.get('debug'):
@@ -137,5 +129,7 @@ def from_yaml():
         root.set_subject(subject)
         root.create_ca_cert()
         for intermediate in config['intermediates']:
-            add_intermediate(root, intermediate, config, data)
+            intermediate['hosts'] = intermediate.get('hosts',
+                                                     config.get('hosts'))
+            add_intermediate(root, intermediate, data)
         write_data(config, data)

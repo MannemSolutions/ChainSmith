@@ -73,13 +73,28 @@ class TlsSubject(dict):
     def chapter(self):
         """
         Return a ConfigChapter that could represent
-        the TlsSubject in a openssl.cnf file
+        the TlsSubject in an openssl.cnf file
         """
         chapter = ConfigChapter('req_distinguished_name')
         for key, value in self.items():
             chapter.append(ConfigLine(f'{key} = {value}'))
         chapter.append(ConfigLine(''))
         return chapter
+
+
+DEFAULT_KEY_USAGES = [
+    'critical',
+    'dataEncipherment',
+    'digitalSignature',
+    'keyEncipherment',
+    'nonRepudiation',
+]
+
+DEFAULT_EXTENDED_KEY_USAGES = [
+    'clientAuth',
+    'emailProtection',
+    'serverAuth',
+]
 
 
 # pylint: disable=too-many-public-methods
@@ -89,14 +104,15 @@ class TlsCA(dict):
     It just is a placeholder for the folder, directories, config files, etc.
     And it has methods to create all, sign sub certificates, generate
     private keys, etc. if __parent is None, it is a root certificate, if not,
-    it is a intermediate certificate. The class can be used to setup a
+    it is an intermediate certificate. The class can be used to set up a
     CA store, and use it to sign requests for lower certificates.
     """
 
     # pylint: disable=too-many-instance-attributes
     __capath = ''
     __name = ''
-    __cert_type = ''
+    __key_usages = []
+    __extended_key_usages = []
     __config_file = ''
     __pem_file = ''
     __password_file = ''
@@ -107,11 +123,13 @@ class TlsCA(dict):
     __stdout = stdout
     __stderr = stderr
 
-    def __init__(self, capath, name, cert_type, parent):
+    def __init__(self, capath, name, config, parent):
         super().__init__()
         self.__capath = capath
         self.__name = name
-        self.__cert_type = cert_type
+        self.__key_usages = config.get('keyUsages', DEFAULT_KEY_USAGES)
+        self.__extended_key_usages = config.get(
+            'extendedKeyUsages', DEFAULT_EXTENDED_KEY_USAGES)
         self.__config_file = join(capath, 'config', 'ca.cnf')
         self.__pem_file = join(capath, 'private', 'cakey.pem')
         self.__password_file = join(capath, 'private', 'capass.enc')
@@ -256,41 +274,32 @@ class TlsCA(dict):
         config_file.set_key('CA_default', 'certificate', self.__cert_file)
         config_file.set_key('CA_default', 'private_key', self.__pem_file)
 
-        if self.__cert_type in ['clientserver', 'client', 'server']:
-            config_file.set_key('usr_cert', 'basicConstraints', 'CA:FALSE')
-            config_file.set_key('usr_cert', 'subjectKeyIdentifier', 'hash')
-        if self.__cert_type == 'clientserver':
-            config_file.set_key('usr_cert', 'nsCertType',
-                                'client, server, email')
-            config_file.set_key('usr_cert', 'nsComment',
-                                '"OpenSSL Generated ClientServer Certificate"')
-            config_file.set_key('usr_cert', 'authorityKeyIdentifier',
-                                'keyid,issuer')
-            config_file.set_key('usr_cert', 'keyUsage',
-                                'critical, nonRepudiation, digitalSignature, '
-                                'keyEncipherment')
-            config_file.set_key('usr_cert', 'extendedKeyUsage',
-                                'clientAuth, serverAuth, emailProtection')
-        elif self.__cert_type == 'client':
-            config_file.set_key('usr_cert', 'nsCertType', 'client, email')
-            config_file.set_key('usr_cert', 'nsComment',
-                                '"OpenSSL Generated Client Certificate"')
-            config_file.set_key('usr_cert', 'authorityKeyIdentifier',
-                                'keyid,issuer')
-            config_file.set_key('usr_cert', 'keyUsage',
-                                'critical, nonRepudiation, digitalSignature, '
-                                'keyEncipherment')
-            config_file.set_key('usr_cert', 'extendedKeyUsage',
-                                'clientAuth, emailProtection')
-        elif self.__cert_type == 'server':
-            config_file.set_key('usr_cert', 'nsCertType', 'server')
-            config_file.set_key('usr_cert', 'nsComment',
-                                '"OpenSSL Generated Server Certificate"')
-            config_file.set_key('usr_cert', 'authorityKeyIdentifier',
-                                'keyid,issuer:always')
-            config_file.set_key('usr_cert', 'keyUsage',
-                                'critical, digitalSignature, keyEncipherment')
-            config_file.set_key('usr_cert', 'extendedKeyUsage', 'serverAuth')
+        config_file.set_key('usr_cert', 'basicConstraints', 'CA:FALSE')
+        config_file.set_key('usr_cert', 'subjectKeyIdentifier', 'hash')
+
+        ns_cert_type = []
+        authority_key_id = 'keyid'
+        ns_comment = ""
+        if 'clientAuth' in self.__extended_key_usages:
+            ns_cert_type.append('client')
+            ns_comment += "Client"
+        else:
+            authority_key_id = 'keyid,issuer:always'
+        if 'emailProtection' in self.__extended_key_usages:
+            ns_cert_type.append('email')
+        if 'serverAuth' in self.__extended_key_usages:
+            ns_cert_type.append('server')
+            ns_comment += "Server"
+
+        config_file.set_key('usr_cert', 'nsCertType', ', '.join(ns_cert_type))
+        config_file.set_key('usr_cert', 'nsComment',
+                            '"OpenSSL Generated {ns_comment} Certificate"')
+        config_file.set_key('usr_cert', 'authorityKeyIdentifier',
+                            authority_key_id)
+        config_file.set_key('v3_req', 'keyUsage',
+                            ', '.join(self.__key_usages))
+        config_file.set_key('v3_req', 'extendedKeyUsage',
+                            ', '.join(self.__extended_key_usages))
 
         self.log('writing config to ' + self.__config_file)
         config_file.write(self.__config_file)
@@ -370,25 +379,12 @@ class TlsCA(dict):
         # -extfile tls/int_server/config/req_server1.cnf -extensions v3_req
         # -passin file:/host/tls/int_server/private/capass.enc
         self.log("Running openssl x509 req for "+self.name())
-        if self.__cert_type == 'clientserver':
-            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
-                    'file:' + self.__password_file, '-CA', self.__chain_file,
-                    '-CAkey', self.__pem_file, '-out', cert_path,
-                    '-CAcreateserial', '-days', '365', '-sha256']
-        elif self.__cert_type == 'client':
-            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
-                    'file:' + self.__password_file, '-CA', self.__chain_file,
-                    '-CAkey', self.__pem_file, '-out', cert_path,
-                    '-CAcreateserial', '-days', '365', '-sha256']
-        elif self.__cert_type == 'server':
-            args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
-                    'file:' + self.__password_file, '-CA',
-                    self.__chain_file, '-CAkey', self.__pem_file, '-out',
-                    cert_path, '-CAcreateserial', '-days', '365',
-                    '-sha256', '-extfile', ext_conf, '-extensions',
-                    'v3_req']
-        else:
-            raise Exception('Unknown intermediate type')
+        args = ['openssl', 'x509', '-req', '-in', csr_path, '-passin',
+                'file:' + self.__password_file, '-CA',
+                self.__chain_file, '-CAkey', self.__pem_file, '-out',
+                cert_path, '-CAcreateserial', '-days', '365',
+                '-sha256', '-extfile', ext_conf, '-extensions',
+                'v3_req']
         self.log_command(' '.join(args))
         run(args, cwd=self.__capath, check=True, stdout=self.__stdout,
             stderr=self.__stderr)
@@ -426,7 +422,7 @@ class TlsCA(dict):
         return certs
 
     def get_private_key(self):
-        """Return the private key of tis intermediate as a string"""
+        """Return the private key of this intermediate as a string"""
         with open(self.__pem_file, encoding="utf8") as pem:
             return pem.read()
 
@@ -448,7 +444,7 @@ class TlsCA(dict):
         except OSError as os_err:
             print("Cannot open file:", os_err)
 
-    def create_int(self, name, cert_type):
+    def create_int(self, name, config):
         """Create an intermediate as a child for this CA"""
         if self.__parent is not None:
             raise Exception("Creating an intermediate on an intermediate "
@@ -456,7 +452,7 @@ class TlsCA(dict):
         if name in self:
             return self[name]
         int_path = join(self.__capath, 'int_' + name)
-        int_ca = TlsCA(int_path, name, cert_type, self)
+        int_ca = TlsCA(int_path, name, config, self)
         int_ca.set_debug_output(self.__stdout, self.__stderr)
         int_ca.create_ca_cert()
         # For a root CA, all intermediates are stored in the object
@@ -568,13 +564,6 @@ class TlsCert:
         config_file.set_key('req', 'req_extensions', 'v3_req')
         # Generic config for both CA and intermediates
         config_file.set_chapter(self.__subject.chapter())
-
-        config_file.set_key('v3_req', 'keyUsage', ', '.join([
-            'keyEncipherment',
-            'dataEncipherment',
-            'digitalSignature',
-        ]))
-        config_file.set_key('v3_req', 'extendedKeyUsage', 'serverAuth')
 
         if len(self.__subject_alternate_names) > 1:
             config_file.set_key('v3_req', 'subjectAltName', '@alt_names')
