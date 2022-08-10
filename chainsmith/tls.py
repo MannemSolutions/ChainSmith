@@ -557,8 +557,11 @@ class TlsCert:
         # Generic config for both CA and intermediates
         config_file.set_chapter(self.__subject.chapter())
 
-        config_file.set_key('v3_req', 'keyUsage',
-                            'keyEncipherment, dataEncipherment, digitalSignature')
+        config_file.set_key('v3_req', 'keyUsage', ', '.join([
+            'keyEncipherment',
+            'dataEncipherment',
+            'digitalSignature',
+        ]))
         config_file.set_key('v3_req', 'extendedKeyUsage', 'serverAuth')
 
         if len(self.__subject_alternate_names) > 1:
