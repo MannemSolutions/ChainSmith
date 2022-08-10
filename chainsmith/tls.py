@@ -293,8 +293,9 @@ class TlsCA(dict):
 
         config_file.set_key('usr_cert', 'nsCertType', ', '.join(ns_cert_type))
         config_file.set_key('usr_cert', 'nsComment',
-                            '"OpenSSL Generated {} Certificate"'.format(ns_comment))
-        config_file.set_key('usr_cert', 'authorityKeyIdentifier', authority_key_id)
+                            '"OpenSSL Generated {ns_comment} Certificate"')
+        config_file.set_key('usr_cert', 'authorityKeyIdentifier',
+                            authority_key_id)
         config_file.set_key('v3_req', 'keyUsage',
                             ', '.join(self.__key_usages))
         config_file.set_key('v3_req', 'extendedKeyUsage',

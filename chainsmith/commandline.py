@@ -83,7 +83,8 @@ def add_intermediate(root, intermediate_config, data):
         pass
 
     data['certs'][intermediate_name] = intermediate_ca.get_certs()
-    data['private_keys'][intermediate_name] = intermediate_ca.get_private_keys()
+    data['private_keys'][intermediate_name] = \
+        intermediate_ca.get_private_keys()
 
 
 def write_data(config, data):
@@ -128,6 +129,7 @@ def from_yaml():
         root.set_subject(subject)
         root.create_ca_cert()
         for intermediate in config['intermediates']:
-            intermediate['hosts'] = intermediate.get('hosts', config.get('hosts'))
+            intermediate['hosts'] = intermediate.get('hosts',
+                                                     config.get('hosts'))
             add_intermediate(root, intermediate, data)
         write_data(config, data)
