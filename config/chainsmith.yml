@@ -14,6 +14,12 @@ intermediates:
     servers:
       host1.example.com:
         - 1.2.3.4
+    keyUsages:
+      - keyEncipherment
+      - dataEncipherment
+      - digitalSignature
+    extendedKeyUsages:
+      - serverAuth
 # You can set servers directly
 #      host.example.com:
 #        - 10.11.12.13
@@ -24,3 +30,9 @@ intermediates:
       - postgres
       - wal-g
       - application
+    keyUsages:
+      - keyEncipherment
+      - dataEncipherment
+      - digitalSignature
+    extendedKeyUsages:
+      - clientAuth
