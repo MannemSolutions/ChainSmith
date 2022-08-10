@@ -73,7 +73,7 @@ class TlsSubject(dict):
     def chapter(self):
         """
         Return a ConfigChapter that could represent
-        the TlsSubject in a openssl.cnf file
+        the TlsSubject in an openssl.cnf file
         """
         chapter = ConfigChapter('req_distinguished_name')
         for key, value in self.items():
@@ -89,7 +89,7 @@ class TlsCA(dict):
     It just is a placeholder for the folder, directories, config files, etc.
     And it has methods to create all, sign sub certificates, generate
     private keys, etc. if __parent is None, it is a root certificate, if not,
-    it is a intermediate certificate. The class can be used to setup a
+    it is an intermediate certificate. The class can be used to set up a
     CA store, and use it to sign requests for lower certificates.
     """
 
@@ -426,7 +426,7 @@ class TlsCA(dict):
         return certs
 
     def get_private_key(self):
-        """Return the private key of tis intermediate as a string"""
+        """Return the private key of this intermediate as a string"""
         with open(self.__pem_file, encoding="utf8") as pem:
             return pem.read()
 

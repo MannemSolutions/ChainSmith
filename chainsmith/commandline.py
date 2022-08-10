@@ -20,13 +20,14 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-DEFAULT_SUBJECT = {"C": "NL",
-                   "ST": "Somestate",
-                   "L": "Somecity",
-                   "O": "Mannem Solutions",
-                   "OU": "Chainsmith TLS chain maker",
-                   "CN": "chainsmith"
-                   }
+DEFAULT_SUBJECT = {
+    "C": "NL",
+    "ST": "Somestate",
+    "L": "Somecity",
+    "O": "Mannem Solutions",
+    "OU": "Chainsmith TLS chain maker",
+    "CN": "chainsmith",
+}
 
 
 def hosts_from_inventory(hosts_path):
