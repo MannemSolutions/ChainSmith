@@ -495,6 +495,8 @@ class TlsCert:
     __name = ""
     __parent = None
     __pem_file = ""
+    __pk8_file = ""
+    __der_file = ""
     __subject_alternate_names = None
     __csr_path = ""
     __cert_file = ""
@@ -515,6 +517,8 @@ class TlsCert:
 
         path = parent.path()
         self.__pem_file = join(path, 'private', name + '.key.pem')
+        self.__pk8_file = join(path, 'private', name + '.key.pk8')
+        self.__der_file = join(path, 'private', name + '.key.der')
         self.__csr_path = join(path, 'csr', name + '.csr')
         self.__cert_file = join(path, 'certs', name + '.pem')
         self.__config_file = join(path, 'config', 'req_' + name + '.cnf')
@@ -541,6 +545,14 @@ class TlsCert:
         """Generate a private key for this certificate"""
         args = ['openssl', 'genrsa', '-out', self.__pem_file, '4096']
         self.log_command(' '.join(args))
+        run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        args = ['openssl', 'pkcs8', '-topk8', '-inform', 'PEM', '-inform',
+                'PEM', '-in', self.__pem_file, '-out', self.__pk8_file,
+                '-nocrypt']
+        run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
+        args = ['openssl', 'pkcs8', '-topk8', '-inform', 'PEM', '-outform',
+                'DER', '-in', self.__pem_file, '-out', self.__der_file,
+                '-nocrypt']
         run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
         self.verify_pem()
 
