@@ -542,13 +542,15 @@ class TlsCert:
         args = ['openssl', 'genrsa', '-out', self.__pem_file, '4096']
         self.log_command(' '.join(args))
         run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
-        args = ['openssl', 'pkcs8', '-topk8', '-inform', 'PEM', '-inform',
+        args = ['openssl', 'pkcs8', '-topk8', '-inform', 'PEM', '-outform',
                 'PEM', '-in', self.__pem_file, '-out', self.__pk8_file,
                 '-nocrypt']
+        self.log_command(' '.join(args))
         run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
         args = ['openssl', 'pkcs8', '-topk8', '-inform', 'PEM', '-outform',
                 'DER', '-in', self.__pem_file, '-out', self.__der_file,
                 '-nocrypt']
+        self.log_command(' '.join(args))
         run(args, check=True, stdout=self.__stdout, stderr=self.__stderr)
         self.verify_pem()
 
